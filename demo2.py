@@ -15,8 +15,8 @@ LCD_LINE_1 = 0x80  # Địa chỉ của dòng 1 trên LCD
 LCD_LINE_2 = 0xC0  # Địa chỉ của dòng 2 trên LCD
 
 # Định nghĩa các chân nút bấm
-BUTTON_UP_PIN = 17  # Chân GPIO nút lên
-BUTTON_DOWN_PIN = 27  # Chân GPIO nút xuống
+BUTTON_UP_PIN = 22  # Chân GPIO nút lên
+BUTTON_DOWN_PIN = 23  # Chân GPIO nút xuống
 
 # Khởi tạo giao tiếp I2C
 bus = smbus2.SMBus(1)
@@ -120,12 +120,9 @@ def main():
     obstacles = [(LCD_WIDTH - 1, random.choice([1, 2]))]  # Tạo chướng ngại vật ban đầu
     speed = 0.3  # Tốc độ di chuyển chướng ngại vật ban đầu
 
-    if GPIO.input(BUTTON_UP_PIN) is not None and GPIO.input(BUTTON_DOWN_PIN) is not None:
-        GPIO.add_event_detect(BUTTON_UP_PIN, GPIO.FALLING, callback=button_up_callback, bouncetime=100)
-        GPIO.add_event_detect(BUTTON_DOWN_PIN, GPIO.FALLING, callback=button_down_callback, bouncetime=100)
-    else:
-        print("GPIO pins are not configured properly.")
-
+    # Thêm ngắt cho nút bấm
+    GPIO.add_event_detect(BUTTON_UP_PIN, GPIO.FALLING, callback=button_up_callback, bouncetime=10)
+    GPIO.add_event_detect(BUTTON_DOWN_PIN, GPIO.FALLING, callback=button_down_callback, bouncetime=10)
 
     while True:
         # Di chuyển chướng ngại vật
