@@ -21,8 +21,8 @@ BUTTON_DOWN_PIN = 23  # Chân GPIO nút xuống
 # Khởi tạo giao tiếp I2C
 bus = smbus2.SMBus(1)
 
-# Khởi tạo GPIO cho các nút bấm
-GPIO.setmode(GPIO.BCM)  # Thiết lập chế độ đánh số chân
+# Thiết lập GPIO cho các nút bấm
+GPIO.setmode(GPIO.BCM)
 GPIO.setup(BUTTON_UP_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.setup(BUTTON_DOWN_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
@@ -105,12 +105,14 @@ def generate_obstacles(obstacles):
 # Ngắt khi nhấn nút lên
 def button_up_callback(channel):
     global player_position
-    player_position = 1  # Di chuyển lên dòng 1
+    if player_position == 2:
+        player_position = 1  # Di chuyển lên dòng 1
 
 # Ngắt khi nhấn nút xuống
 def button_down_callback(channel):
     global player_position
-    player_position = 2  # Di chuyển xuống dòng 2
+    if player_position == 1:
+        player_position = 2  # Di chuyển xuống dòng 2
 
 # Hàm chính điều khiển trò chơi
 def main():
@@ -120,7 +122,6 @@ def main():
     obstacles = [(LCD_WIDTH - 1, random.choice([1, 2]))]  # Tạo chướng ngại vật ban đầu
     speed = 0.3  # Tốc độ di chuyển chướng ngại vật ban đầu
 
-    # Thêm ngắt cho nút bấm
     GPIO.add_event_detect(BUTTON_UP_PIN, GPIO.FALLING, callback=button_up_callback, bouncetime=10)
     GPIO.add_event_detect(BUTTON_DOWN_PIN, GPIO.FALLING, callback=button_down_callback, bouncetime=10)
 
@@ -147,4 +148,5 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         pass
     finally:
+        lcd_byte(0x01, LCD_CMD)  # Xóa màn hình LCD
         GPIO.cleanup()  # Dọn dẹp GPIO
