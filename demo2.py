@@ -120,9 +120,12 @@ def main():
     obstacles = [(LCD_WIDTH - 1, random.choice([1, 2]))]  # Tạo chướng ngại vật ban đầu
     speed = 0.3  # Tốc độ di chuyển chướng ngại vật ban đầu
 
-    # Thiết lập ngắt cho nút bấm
-    GPIO.add_event_detect(BUTTON_UP_PIN, GPIO.FALLING, callback=button_up_callback, bouncetime=100)
-    GPIO.add_event_detect(BUTTON_DOWN_PIN, GPIO.FALLING, callback=button_down_callback, bouncetime=100)
+    if GPIO.input(BUTTON_UP_PIN) is not None and GPIO.input(BUTTON_DOWN_PIN) is not None:
+        GPIO.add_event_detect(BUTTON_UP_PIN, GPIO.FALLING, callback=button_up_callback, bouncetime=100)
+        GPIO.add_event_detect(BUTTON_DOWN_PIN, GPIO.FALLING, callback=button_down_callback, bouncetime=100)
+    else:
+        print("GPIO pins are not configured properly.")
+
 
     while True:
         # Di chuyển chướng ngại vật
