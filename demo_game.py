@@ -1,76 +1,66 @@
 import time
+import I2C_LCD_driver
 import RPi.GPIO as GPIO
-from luma.core.interface.serial import i2c
-from luma.lcd import character
+import random
 
-# Thiết lập thông số cho màn hình LCD
-serial = i2c(port=1, address=0x27)  # Địa chỉ I2C của LCD
-lcd = character(serial)
-
-# Kích thước của màn hình LCD
-lcd_width = 16  # Số cột
-lcd_height = 2  # Số hàng
-
-# Vật cản và vật thể T
-obstacle = "X"
-empty_space = " "
-T = "T"
-
-# Vị trí ban đầu của vật thể T
-t_position = [0, 0]  # (hàng, cột)
-
-# Thiết lập GPIO
-button_up = 17  # Chân GPIO cho nút bấm lên
-button_down = 27  # Chân GPIO cho nút bấm xuống
+# Thiết lập GPIO cho nút nhấn
+UP_BUTTON_PIN = 17
+DOWN_BUTTON_PIN = 27
 
 GPIO.setmode(GPIO.BCM)
-GPIO.setup(button_up, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(button_down, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(UP_BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(DOWN_BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-# Hàm hiển thị trạng thái trên LCD
-def display(lcd, obstacles, t_position):
-    lcd.clear()
-    for row in range(lcd_height):
-        line = ""
-        for col in range(lcd_width):
-            if [row, col] == t_position:
-                line += T
-            elif [row, col] in obstacles:
-                line += obstacle
-            else:
-                line += empty_space
-        lcd.display(line)
+# Khởi tạo màn hình LCD
+lcd = I2C_LCD_driver.lcd()
 
-# Hàm di chuyển vật cản
-def move_obstacles():
-    obstacles = []
-    for row in range(lcd_height):
-        for col in range(lcd_width):
-            if col % 4 == 0 and col < lcd_width:  # Vật cản cách nhau 3 ô
-                obstacles.append([row, col])
-    return obstacles
+# Các tham số trò chơi
+lcd_width = 16
+lcd_height = 2
+obstacle_positions = [random.randint(0, 1) for _ in range(4)]  # Vị trí của 4 vật cản
+player_position = 0  # Vị trí của vật thể T
+speed = 0.1  # Tốc độ di chuyển
 
-# Chương trình chính
 try:
     while True:
-        obstacles = move_obstacles()  # Tạo danh sách vật cản
-        for i in range(lcd_width + 1):
-            # Cập nhật vị trí của vật cản
-            obstacles = [[row, col - 1] if col > 0 else [row, lcd_width - 1] for row, col in obstacles]
-            display(lcd, obstacles, t_position)  # Hiển thị trạng thái lên LCD
+        # Xóa màn hình
+        lcd.lcd_clear()
+
+        # Hiển thị vật thể T
+        for row in range(lcd_height):
+            if row == player_position:
+                lcd.lcd_display_string('T', 1)
+            else:
+                lcd.lcd_display_string(' ', 1)
+
+        # Hiển thị các vật cản
+        for i in range(len(obstacle_positions)):
+            if obstacle_positions[i] == 0:
+                lcd.lcd_display_string('X', lcd_width - (i*4 + 1))
+            else:
+                lcd.lcd_display_string(' ', lcd_width - (i*4 + 1))
+
+        # Di chuyển các vật cản sang trái
+        for i in range(len(obstacle_positions)):
+            if obstacle_positions[i] > 0:
+                obstacle_positions[i] -= 1
             
-            # Kiểm tra nút bấm
-            if GPIO.input(button_up) == GPIO.LOW and t_position[0] > 0:  # Di chuyển lên
-                t_position[0] -= 1
-                time.sleep(0.2)  # Tránh nhấn nhiều lần
-            if GPIO.input(button_down) == GPIO.LOW and t_position[0] < lcd_height - 1:  # Di chuyển xuống
-                t_position[0] += 1
-                time.sleep(0.2)  # Tránh nhấn nhiều lần
-            
-            time.sleep(0.2)  # Thời gian giữa các khung hình
+            # Khi vật cản ra ngoài màn hình, tạo vật cản mới
+            if obstacle_positions[i] < 0:
+                obstacle_positions[i] = 1
+                obstacle_positions[i] = random.randint(0, 1)
+
+        # Kiểm tra nút nhấn để di chuyển vật thể T
+        if GPIO.input(UP_BUTTON_PIN) == GPIO.LOW and player_position > 0:
+            player_position -= 1
+            time.sleep(0.1)  # Thời gian trễ để tránh nhấn liên tục
+        elif GPIO.input(DOWN_BUTTON_PIN) == GPIO.LOW and player_position < lcd_height - 1:
+            player_position += 1
+            time.sleep(0.1)  # Thời gian trễ để tránh nhấn liên tục
+
+        time.sleep(speed)
 
 except KeyboardInterrupt:
     pass
 finally:
-    GPIO.cleanup()  # Dọn dẹp GPIO
-    lcd.clear()  # Xóa màn hình khi dừng
+    GPIO.cleanup()
