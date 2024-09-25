@@ -15,8 +15,8 @@ LCD_LINE_1 = 0x80  # Địa chỉ của dòng 1 trên LCD
 LCD_LINE_2 = 0xC0  # Địa chỉ của dòng 2 trên LCD
 
 # Định nghĩa các chân nút bấm
-BUTTON_UP_PIN = 22  # Chân GPIO nút lên
-BUTTON_DOWN_PIN = 23  # Chân GPIO nút xuống
+BUTTON_UP_PIN = 17  # Chân GPIO nút lên
+BUTTON_DOWN_PIN = 27  # Chân GPIO nút xuống
 
 # Khởi tạo giao tiếp I2C
 bus = smbus2.SMBus(1)
@@ -25,9 +25,6 @@ bus = smbus2.SMBus(1)
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(BUTTON_UP_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.setup(BUTTON_DOWN_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-
-# Khởi tạo trạng thái của người chơi
-player_position = 1  # Người chơi bắt đầu ở dòng 1
 
 # Hàm gửi dữ liệu đến LCD
 def lcd_byte(bits, mode):
@@ -58,7 +55,7 @@ def lcd_init():
     lcd_byte(0x01, LCD_CMD)
     time.sleep(0.0005)
 
-# Viết chuỗi lên màn hình LCD
+# Viết chuỗi lên màn hình LCD, chỉ cập nhật ký tự thay đổi
 def lcd_string(message, line):
     message = message.ljust(LCD_WIDTH, " ")
     lcd_byte(line, LCD_CMD)
@@ -102,34 +99,34 @@ def generate_obstacles(obstacles):
 
     return new_obstacles
 
-# Ngắt khi nhấn nút lên
-def button_up_callback(channel):
-    global player_position
-    if player_position == 2:
-        player_position = 1  # Di chuyển lên dòng 1
-
-# Ngắt khi nhấn nút xuống
-def button_down_callback(channel):
-    global player_position
-    if player_position == 1:
-        player_position = 2  # Di chuyển xuống dòng 2
-
 # Hàm chính điều khiển trò chơi
 def main():
     lcd_init()
 
-    global player_position
+    # Vị trí khởi tạo
+    player_position = 1  # Người chơi ban đầu ở dòng 1
     obstacles = [(LCD_WIDTH - 1, random.choice([1, 2]))]  # Tạo chướng ngại vật ban đầu
     speed = 0.3  # Tốc độ di chuyển chướng ngại vật ban đầu
 
-    GPIO.add_event_detect(BUTTON_UP_PIN, GPIO.FALLING, callback=button_up_callback, bouncetime=10)
-    GPIO.add_event_detect(BUTTON_DOWN_PIN, GPIO.FALLING, callback=button_down_callback, bouncetime=10)
+    prev_player_position = player_position
+    prev_obstacles = obstacles.copy()
 
     while True:
+        # Điều khiển người chơi di chuyển lên hoặc xuống
+        if GPIO.input(BUTTON_UP_PIN) == GPIO.LOW:
+            player_position = 1  # Di chuyển người chơi lên dòng 1
+            display_objects(player_position, obstacles)
+            time.sleep(0.1)  # Debounce với tốc độ nhanh hơn
+
+        if GPIO.input(BUTTON_DOWN_PIN) == GPIO.LOW:
+            player_position = 2  # Di chuyển người chơi xuống dòng 2
+            display_objects(player_position, obstacles)
+            time.sleep(0.1)  # Debounce với tốc độ nhanh hơn
+
         # Di chuyển chướng ngại vật
         obstacles = generate_obstacles(obstacles)
 
-        # Hiển thị trạng thái mới
+        # Chỉ cập nhật phần thay đổi để tránh nhấp nháy
         display_objects(player_position, obstacles)
 
         # Kiểm tra va chạm
