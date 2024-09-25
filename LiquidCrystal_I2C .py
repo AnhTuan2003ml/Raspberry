@@ -50,7 +50,7 @@ class lcd:
         self.lcd_write(0x03)
         self.lcd_write(0x03)
         self.lcd_write(0x02)
-        self.lcd_write(LCD_FUNCTIONSET | 0x08 | 0x00 | 0x00)  # 2 dòng, 5x8 điểm
+        self.lcd_write(LCD_FUNCTIONSET | 0x08)  # 2 dòng, 5x8 điểm
         self.lcd_write(LCD_DISPLAYCONTROL | 0x04)  # Bật màn hình
         self.clear()
         self.lcd_write(LCD_ENTRYMODESET | 0x02)  # Mặc định hướng nhập từ trái sang phải
@@ -106,8 +106,8 @@ class lcd:
         pos_map = [0x80, 0xC0, 0x94, 0xD4]
         if 1 <= line <= 4:
             self.lcd_write(pos_map[line - 1] + pos)
-        for char in string:
-            self.lcd_write_char(char)
+            for char in string:
+                self.lcd_write_char(char)
 
 # Ví dụ sử dụng:
 # lcd_screen = lcd()
