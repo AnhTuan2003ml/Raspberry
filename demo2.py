@@ -1,6 +1,7 @@
 import smbus2
 import time
 import RPi.GPIO as GPIO
+import random
 
 # Địa chỉ I2C của LCD
 I2C_ADDR = 0x27
@@ -62,18 +63,43 @@ def lcd_string(message, line):
         lcd_byte(ord(message[i]), LCD_CHR)
 
 # Hiển thị vật thể và chướng ngại vật trên màn hình LCD
-def display_objects(player_pos, obstacle_pos, obstacle_line):
+def display_objects(player_pos, obstacles):
     lcd_byte(0x01, LCD_CMD)  # Xóa màn hình
 
-    if obstacle_line == 1:
-        lcd_string(" " * obstacle_pos + "O", LCD_LINE_1)
-    else:
-        lcd_string(" " * obstacle_pos + "O", LCD_LINE_2)
+    # Hiển thị dòng 1 và dòng 2
+    line1 = [' '] * LCD_WIDTH
+    line2 = [' '] * LCD_WIDTH
 
+    # Cập nhật vị trí vật cản
+    for pos, line in obstacles:
+        if line == 1:
+            line1[pos] = 'O'
+        elif line == 2:
+            line2[pos] = 'O'
+
+    # Cập nhật vị trí người chơi
     if player_pos == 1:
-        lcd_string("P", LCD_LINE_1)
+        line1[0] = 'P'
     else:
-        lcd_string("P", LCD_LINE_2)
+        line2[0] = 'P'
+
+    # Hiển thị lên màn hình
+    lcd_string("".join(line1), LCD_LINE_1)
+    lcd_string("".join(line2), LCD_LINE_2)
+
+# Tạo vật cản với khoảng cách cách nhau ít nhất 2 ô
+def generate_obstacles(obstacles):
+    new_obstacles = []
+    for pos, line in obstacles:
+        if pos > 0:
+            new_obstacles.append((pos - 1, line))
+
+    if len(new_obstacles) == 0 or new_obstacles[-1][0] < (LCD_WIDTH - 3):
+        # Tạo ngẫu nhiên chướng ngại vật
+        line = random.choice([1, 2])
+        new_obstacles.append((LCD_WIDTH - 1, line))
+
+    return new_obstacles
 
 # Hàm chính điều khiển trò chơi
 def main():
@@ -81,33 +107,32 @@ def main():
 
     # Vị trí khởi tạo
     player_position = 1  # Người chơi ban đầu ở dòng 1
-    obstacle_position = LCD_WIDTH - 1  # Chướng ngại vật bắt đầu từ bên phải
-    obstacle_line = 1  # Chướng ngại vật bắt đầu từ dòng 1
-    speed = 0.5  # Tốc độ di chuyển chướng ngại vật
+    obstacles = [(LCD_WIDTH - 1, random.choice([1, 2]))]  # Tạo chướng ngại vật ban đầu
+    speed = 0.3  # Tốc độ di chuyển chướng ngại vật ban đầu
 
     while True:
         # Hiển thị vật thể và chướng ngại vật
-        display_objects(player_position, obstacle_position, obstacle_line)
+        display_objects(player_position, obstacles)
 
-        # Di chuyển chướng ngại vật sang trái
-        obstacle_position -= 1
-        if obstacle_position < 0:
-            obstacle_position = LCD_WIDTH - 1  # Chướng ngại vật quay lại từ phải
-            obstacle_line = 2 if obstacle_line == 1 else 1  # Thay đổi dòng của chướng ngại vật
+        # Di chuyển chướng ngại vật
+        obstacles = generate_obstacles(obstacles)
 
         # Điều khiển người chơi di chuyển lên hoặc xuống
         if GPIO.input(BUTTON_UP_PIN) == GPIO.LOW:
             player_position = 1  # Di chuyển người chơi lên dòng 1
-            time.sleep(0.2)  # Debounce
+            time.sleep(0.1)  # Debounce với tốc độ nhanh hơn
 
         if GPIO.input(BUTTON_DOWN_PIN) == GPIO.LOW:
             player_position = 2  # Di chuyển người chơi xuống dòng 2
-            time.sleep(0.2)  # Debounce
+            time.sleep(0.1)  # Debounce với tốc độ nhanh hơn
 
         # Kiểm tra va chạm
-        if obstacle_position == 0 and player_position == obstacle_line:
+        if any(pos == 0 and line == player_position for pos, line in obstacles):
             lcd_string("GAME OVER", LCD_LINE_1)
             break
+
+        # Tăng dần tốc độ trò chơi
+        speed = max(0.05, speed - 0.001)
 
         time.sleep(speed)  # Tốc độ di chuyển của chướng ngại vật
 
