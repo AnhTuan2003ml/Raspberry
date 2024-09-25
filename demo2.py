@@ -55,7 +55,7 @@ def lcd_init():
     lcd_byte(0x01, LCD_CMD)
     time.sleep(0.0005)
 
-# Viết chuỗi lên màn hình LCD
+# Viết chuỗi lên màn hình LCD, chỉ cập nhật ký tự thay đổi
 def lcd_string(message, line):
     message = message.ljust(LCD_WIDTH, " ")
     lcd_byte(line, LCD_CMD)
@@ -64,9 +64,6 @@ def lcd_string(message, line):
 
 # Hiển thị vật thể và chướng ngại vật trên màn hình LCD
 def display_objects(player_pos, obstacles):
-    lcd_byte(0x01, LCD_CMD)  # Xóa màn hình
-
-    # Hiển thị dòng 1 và dòng 2
     line1 = [' '] * LCD_WIDTH
     line2 = [' '] * LCD_WIDTH
 
@@ -110,9 +107,17 @@ def main():
     obstacles = [(LCD_WIDTH - 1, random.choice([1, 2]))]  # Tạo chướng ngại vật ban đầu
     speed = 0.3  # Tốc độ di chuyển chướng ngại vật ban đầu
 
+    prev_player_position = player_position
+    prev_obstacles = obstacles.copy()
+
     while True:
-        # Hiển thị vật thể và chướng ngại vật
-        display_objects(player_position, obstacles)
+        # Chỉ cập nhật phần thay đổi để tránh nhấp nháy
+        for (prev_pos, prev_line), (new_pos, new_line) in zip(prev_obstacles, obstacles):
+            if prev_pos != new_pos or prev_line != new_line:
+                display_objects(player_position, obstacles)
+                break
+
+        prev_obstacles = obstacles.copy()
 
         # Di chuyển chướng ngại vật
         obstacles = generate_obstacles(obstacles)
@@ -120,10 +125,16 @@ def main():
         # Điều khiển người chơi di chuyển lên hoặc xuống
         if GPIO.input(BUTTON_UP_PIN) == GPIO.LOW:
             player_position = 1  # Di chuyển người chơi lên dòng 1
+            if player_position != prev_player_position:
+                display_objects(player_position, obstacles)
+                prev_player_position = player_position
             time.sleep(0.1)  # Debounce với tốc độ nhanh hơn
 
         if GPIO.input(BUTTON_DOWN_PIN) == GPIO.LOW:
             player_position = 2  # Di chuyển người chơi xuống dòng 2
+            if player_position != prev_player_position:
+                display_objects(player_position, obstacles)
+                prev_player_position = player_position
             time.sleep(0.1)  # Debounce với tốc độ nhanh hơn
 
         # Kiểm tra va chạm
