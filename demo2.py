@@ -61,35 +61,53 @@ def lcd_string(message, line):
     for i in range(LCD_WIDTH):
         lcd_byte(ord(message[i]), LCD_CHR)
 
-# Hiển thị chướng ngại vật tại vị trí cụ thể
-def display_obstacle(position):
-    lcd_string(" " * position + "O", LCD_LINE_1)
+# Hiển thị vật thể và chướng ngại vật trên màn hình LCD
+def display_objects(player_pos, obstacle_pos, obstacle_line):
+    lcd_byte(0x01, LCD_CMD)  # Xóa màn hình
 
-# Hàm chính điều khiển chướng ngại vật di chuyển
+    if obstacle_line == 1:
+        lcd_string(" " * obstacle_pos + "O", LCD_LINE_1)
+    else:
+        lcd_string(" " * obstacle_pos + "O", LCD_LINE_2)
+
+    if player_pos == 1:
+        lcd_string("P", LCD_LINE_1)
+    else:
+        lcd_string("P", LCD_LINE_2)
+
+# Hàm chính điều khiển trò chơi
 def main():
     lcd_init()
 
-    # Vị trí khởi tạo và tốc độ di chuyển chướng ngại vật
-    obstacle_position = 0
-    speed = 0.5  # Tốc độ di chuyển (thời gian dừng giữa các lần di chuyển)
-
-    display_obstacle(obstacle_position)
+    # Vị trí khởi tạo
+    player_position = 1  # Người chơi ban đầu ở dòng 1
+    obstacle_position = LCD_WIDTH - 1  # Chướng ngại vật bắt đầu từ bên phải
+    obstacle_line = 1  # Chướng ngại vật bắt đầu từ dòng 1
+    speed = 0.5  # Tốc độ di chuyển chướng ngại vật
 
     while True:
-        # Di chuyển chướng ngại vật
-        obstacle_position += 1
-        if obstacle_position >= LCD_WIDTH:
-            obstacle_position = 0
-        display_obstacle(obstacle_position)
+        # Hiển thị vật thể và chướng ngại vật
+        display_objects(player_position, obstacle_position, obstacle_line)
 
-        # Điều chỉnh tốc độ bằng nút bấm
+        # Di chuyển chướng ngại vật sang trái
+        obstacle_position -= 1
+        if obstacle_position < 0:
+            obstacle_position = LCD_WIDTH - 1  # Chướng ngại vật quay lại từ phải
+            obstacle_line = 2 if obstacle_line == 1 else 1  # Thay đổi dòng của chướng ngại vật
+
+        # Điều khiển người chơi di chuyển lên hoặc xuống
         if GPIO.input(BUTTON_UP_PIN) == GPIO.LOW:
-            speed = max(0.1, speed - 0.1)  # Giảm thời gian dừng, tăng tốc độ
+            player_position = 1  # Di chuyển người chơi lên dòng 1
             time.sleep(0.2)  # Debounce
 
         if GPIO.input(BUTTON_DOWN_PIN) == GPIO.LOW:
-            speed = min(1, speed + 0.1)  # Tăng thời gian dừng, giảm tốc độ
+            player_position = 2  # Di chuyển người chơi xuống dòng 2
             time.sleep(0.2)  # Debounce
+
+        # Kiểm tra va chạm
+        if obstacle_position == 0 and player_position == obstacle_line:
+            lcd_string("GAME OVER", LCD_LINE_1)
+            break
 
         time.sleep(speed)  # Tốc độ di chuyển của chướng ngại vật
 
