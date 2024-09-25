@@ -143,6 +143,7 @@ def main():
 
 if __name__ == '__main__':
     try:
+        GPIO.cleanup()  # Dọn dẹp GPIO trước khi chạy
         main()
     except KeyboardInterrupt:
         pass
