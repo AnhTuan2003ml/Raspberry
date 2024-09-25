@@ -21,8 +21,8 @@ BUTTON_DOWN_PIN = 23  # Chân GPIO nút xuống
 # Khởi tạo giao tiếp I2C
 bus = smbus2.SMBus(1)
 
-# Thiết lập GPIO cho các nút bấm
-GPIO.setmode(GPIO.BCM)
+# Khởi tạo GPIO cho các nút bấm
+GPIO.setmode(GPIO.BCM)  # Thiết lập chế độ đánh số chân
 GPIO.setup(BUTTON_UP_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.setup(BUTTON_DOWN_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
@@ -143,10 +143,8 @@ def main():
 
 if __name__ == '__main__':
     try:
-        GPIO.cleanup()  # Dọn dẹp GPIO trước khi chạy
         main()
     except KeyboardInterrupt:
         pass
     finally:
-        lcd_byte(0x01, LCD_CMD)  # Xóa màn hình LCD
         GPIO.cleanup()  # Dọn dẹp GPIO
